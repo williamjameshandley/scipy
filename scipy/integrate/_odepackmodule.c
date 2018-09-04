@@ -50,13 +50,14 @@ typedef struct _odepack_globals {
     int jac_transpose;
     int jac_type;
     int tfirst;
+    PyObject *python_g;
 } odepack_params;
 
 static odepack_params global_params = {NULL, NULL, NULL, 0, 0, 0};
 
 static
 PyObject *call_odeint_user_function(PyObject *func, npy_intp n, double *x,
-                                    double t, int tfirst,
+                                    double t, int tfirst, 
                                     PyObject *args, PyObject *error_obj)
 {
     /*
@@ -136,17 +137,17 @@ static PyObject *odepack_error;
     #if defined(NO_APPEND_FORTRAN)
         /* nothing to do here */
     #else
-        #define LSODA  LSODA_
+        #define LSODAR  LSODAR_
     #endif
 #else
     #if defined(NO_APPEND_FORTRAN)
-        #define LSODA  lsoda
+        #define LSODAR  lsodar
     #else
-        #define LSODA  lsoda_
+        #define LSODAR  lsodar_
     #endif
 #endif
 
-void LSODA();
+void LSODAR();
 
 /*
 void ode_function(int *n, double *t, double *y, double *ydot)
@@ -360,6 +361,53 @@ ode_jacobian_function(int *n, double *t, double *y, int *ml, int *mu,
 }
 
 
+void
+ode_g_function(int *n, double *t, double *y, int *ng, double *gout)
+{
+    /*
+    This is the function called from the Fortran code. It should
+        -- use call_odeint_user_function to get a multiarrayobject result
+        -- check for errors and set *n to -1 if any
+        -- otherwise place result of calculation in gout
+    */
+
+    PyArrayObject *result_array = NULL;
+
+    result_array = (PyArrayObject *)
+                   call_odeint_user_function(global_params.python_g,
+                                             *n, y, *t, global_params.tfirst,
+                                             global_params.extra_arguments,
+                                             odepack_error);
+    if (result_array == NULL) {
+        *n = -1;
+        return;
+    }
+
+    if (PyArray_NDIM(result_array) > 1) {
+        *n = -1;
+        PyErr_Format(PyExc_RuntimeError,
+                "The array return by g must be one-dimensional, but got ndim=%d.",
+                PyArray_NDIM(result_array));
+        Py_DECREF(result_array);
+        return;
+    }
+
+    if (PyArray_Size((PyObject *)result_array) != *ng) {
+        PyErr_Format(PyExc_RuntimeError,
+            "The size of the array returned by g (%ld) does not match "
+            "ng (%d).",
+            PyArray_Size((PyObject *)result_array), *ng);
+        *n = -1;
+        Py_DECREF(result_array);
+        return;
+    }
+
+    memcpy(gout, PyArray_DATA(result_array), (*ng)*sizeof(double));
+    Py_DECREF(result_array);
+    return;
+}
+
+
 int
 setup_extra_inputs(PyArrayObject **ap_rtol, PyObject *o_rtol,
                    PyArrayObject **ap_atol, PyObject *o_atol,
@@ -471,7 +519,7 @@ static char doc_odeint[] =
     "[y,{infodict,}istate] = odeint(fun, y0, t, args=(), Dfun=None, "
     "col_deriv=0, ml=, mu=, full_output=0, rtol=, atol=, tcrit=, h0=0.0, "
     "hmax=0.0, hmin=0.0, ixpr=0.0, mxstep=0.0, mxhnil=0, mxordn=0, "
-    "mxords=0)\n  yprime = fun(y,t,...)";
+    "mxords=0, tfirst=0, g=None, ng=1)\n  yprime = fun(y,t,...)";
 
 
 static PyObject *
@@ -488,6 +536,8 @@ odepack_odeint(PyObject *dummy, PyObject *args, PyObject *kwdict)
     double h0 = 0.0, hmax = 0.0, hmin = 0.0;
     int ixpr = 0, mxstep = 0, mxhnil = 0, mxordn = 12, mxords = 5, ml = -1, mu = -1;
     int tfirst;
+    PyObject *g = Py_None;
+    int ng, *jroot;
     PyObject *o_tcrit = NULL;
     PyArrayObject *ap_tcrit = NULL;
     PyArrayObject *ap_hu = NULL, *ap_tcur = NULL, *ap_tolsf = NULL, *ap_tsw = NULL;
@@ -503,14 +553,14 @@ odepack_odeint(PyObject *dummy, PyObject *args, PyObject *kwdict)
     static char *kwlist[] = {"fun", "y0", "t", "args", "Dfun", "col_deriv",
                              "ml", "mu", "full_output", "rtol", "atol", "tcrit",
                              "h0", "hmax", "hmin", "ixpr", "mxstep", "mxhnil",
-                             "mxordn", "mxords", "tfirst", NULL};
+                             "mxordn", "mxords", "tfirst", "g", "ng", NULL};
     odepack_params save_params;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "OOO|OOiiiiOOOdddiiiiii", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "OOO|OOiiiiOOOdddiiiiiiOi", kwlist,
                                      &fcn, &y0, &p_tout, &extra_args, &Dfun,
                                      &col_deriv, &ml, &mu, &full_output, &o_rtol, &o_atol,
                                      &o_tcrit, &h0, &hmax, &hmin, &ixpr, &mxstep, &mxhnil,
-                                     &mxordn, &mxords, &tfirst)) {
+                                     &mxordn, &mxords, &tfirst, &g, &ng)) {
         return NULL;
     }
 
@@ -566,6 +616,7 @@ odepack_odeint(PyObject *dummy, PyObject *args, PyObject *kwdict)
     global_params.jac_transpose = !(col_deriv);
     global_params.jac_type = jt;
     global_params.tfirst = tfirst;
+    global_params.python_g = g;
 
     /* Initial input vector */
     ap_y = (PyArrayObject *) PyArray_ContiguousFromObject(y0, NPY_DOUBLE, 0, 0);
@@ -659,6 +710,8 @@ odepack_odeint(PyObject *dummy, PyObject *args, PyObject *kwdict)
     istate = 1;
     k = t0count;
 
+    jroot = (int *)(ng);
+
     /* If full output make some useful output arrays */
     if (full_output) {
         out_sz = ntimes-1;
@@ -695,9 +748,9 @@ odepack_odeint(PyObject *dummy, PyObject *args, PyObject *kwdict)
             itask = 1;  /* No more critical values */
         }
 
-        LSODA(ode_function, &neq, y, &t, tout_ptr, &itol, rtol, atol, &itask,
+        LSODAR(ode_function, &neq, y, &t, tout_ptr, &itol, rtol, atol, &itask,
               &istate, &iopt, rwork, &lrw, iwork, &liw,
-              ode_jacobian_function, &jt);
+              ode_jacobian_function, &jt, ode_g_function, &ng, &jroot);
         if (full_output) {
             *((double *)PyArray_DATA(ap_hu) + (k-1)) = rwork[10];
             *((double *)PyArray_DATA(ap_tcur) + (k-1)) = rwork[12];

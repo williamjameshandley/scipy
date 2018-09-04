@@ -28,14 +28,14 @@ _msgs = {2: "Integration successful.",
 def odeint(func, y0, t, args=(), Dfun=None, col_deriv=0, full_output=0,
            ml=None, mu=None, rtol=None, atol=None, tcrit=None, h0=0.0,
            hmax=0.0, hmin=0.0, ixpr=0, mxstep=0, mxhnil=0, mxordn=12,
-           mxords=5, printmessg=0, tfirst=False):
+           mxords=5, printmessg=0, tfirst=False, g=None, ng=0):
     """
     Integrate a system of ordinary differential equations.
     
     .. note:: For new code, use `scipy.integrate.solve_ivp` to solve a
               differential equation.
 
-    Solve a system of ordinary differential equations using lsoda from the
+    Solve a system of ordinary differential equations using lsodar from the
     FORTRAN library odepack.
 
     Solves the initial value problem for stiff or non-stiff systems
@@ -81,6 +81,12 @@ def odeint(func, y0, t, args=(), Dfun=None, col_deriv=0, full_output=0,
     tfirst: bool, optional
         If True, the first two arguments of `func` (and `Dfun`, if given)
         must ``t, y`` instead of the default ``y, t``.
+    g : callable(y, t, ...) or callable(t, y, ...)
+        Root finding function.
+        If the signature is ``callable(t, y, ...)``, then the argument
+        `tfirst` must be set ``True``.
+    ng : int
+        Number of roots to search for in root finding function g.
 
         .. versionadded:: 1.1.0
 
@@ -241,7 +247,7 @@ def odeint(func, y0, t, args=(), Dfun=None, col_deriv=0, full_output=0,
     output = _odepack.odeint(func, y0, t, args, Dfun, col_deriv, ml, mu,
                              full_output, rtol, atol, tcrit, h0, hmax, hmin,
                              ixpr, mxstep, mxhnil, mxordn, mxords,
-                             int(bool(tfirst)))
+                             int(bool(tfirst)), g, ng)
     if output[-1] < 0:
         warning_msg = _msgs[output[-1]] + " Run with full_output = 1 to get quantitative information."
         warnings.warn(warning_msg, ODEintWarning)
