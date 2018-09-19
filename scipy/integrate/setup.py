@@ -25,6 +25,12 @@ def configuration(parent_package='',top_path=None):
         'lsoda.f', 'prja.f', 'solsy.f', 'srcma.f',
         'stoda.f', 'vmnorm.f', 'xerrwv.f', 'xsetf.f',
         'xsetun.f']]
+    lsodar_src = [join('odepack', fn) for fn in [
+        'blkdta000.f', 'bnorm.f', 'cfode.f',
+        'ewset.f', 'fnorm.f', 'intdy.f',
+        'lsodar.f', 'prja.f', 'solsy.f', 'srcma.f',
+        'stoda.f', 'vmnorm.f', 'xerrwv.f', 'xsetf.f',
+        'xsetun.f']]
     vode_src = [join('odepack', 'vode.f'), join('odepack', 'zvode.f')]
     dop_src = [join('dop','*.f')]
     quadpack_test_src = [join('tests','_test_multivariate.c')]
@@ -34,6 +40,7 @@ def configuration(parent_package='',top_path=None):
                        config_fc={'noopt':(__file__,1)})
     config.add_library('quadpack', sources=quadpack_src)
     config.add_library('lsoda', sources=lsoda_src)
+    config.add_library('lsodar', sources=lsodar_src)
     config.add_library('vode', sources=vode_src)
     config.add_library('dop', sources=dop_src)
 
@@ -52,13 +59,13 @@ def configuration(parent_package='',top_path=None):
                          include_dirs=include_dirs,
                          **lapack_opt)
 
-    # odepack/lsoda-odeint
+    # odepack/lsoda-odeint/lsodar-odeint
     odepack_opts = lapack_opt.copy()
     odepack_opts.update(numpy_nodepr_api)
     config.add_extension('_odepack',
                          sources=['_odepackmodule.c'],
-                         libraries=['lsoda', 'mach'] + lapack_libs,
-                         depends=(lsoda_src + mach_src),
+                         libraries=['lsoda', 'lsodar', 'mach'] + lapack_libs,
+                         depends=(lsoda_src + lsodar_src + mach_src),
                          **odepack_opts)
 
     # vode
@@ -75,6 +82,13 @@ def configuration(parent_package='',top_path=None):
                          depends=(lsoda_src + mach_src),
                          **lapack_opt)
 
+    # lsodar
+    config.add_extension('lsodar',
+                         sources=['lsodar.pyf'],
+                         libraries=['lsodar', 'mach'] + lapack_libs,
+                         depends=(lsodar_src + mach_src),
+                         **lapack_opt)
+
     # dop
     config.add_extension('_dop',
                          sources=['dop.pyf'],
@@ -87,8 +101,8 @@ def configuration(parent_package='',top_path=None):
     # Fortran+f2py extension module for testing odeint.
     config.add_extension('_test_odeint_banded',
                          sources=odeint_banded_test_src,
-                         libraries=['lsoda', 'mach'] + lapack_libs,
-                         depends=(lsoda_src + mach_src),
+                         libraries=['lsoda', 'lsodar', 'mach'] + lapack_libs,
+                         depends=(lsoda_src + lsodar_src + mach_src),
                          **lapack_opt)
 
     config.add_subpackage('_ivp')

@@ -59,7 +59,7 @@ def _solve_linear_sys(a, y0, tend=1, dt=0.1,
     dt : float
         Step size of the output.
     solver : str
-        If not None, this must be "vode", "lsoda" or "zvode".
+        If not None, this must be "vode", "lsoda", "lsodar" or "zvode".
     method : str
         Either "bdf" or "adams".
     use_jac : bool
@@ -130,12 +130,12 @@ def _analytical_solution(a, y0, t):
 
 
 def test_banded_ode_solvers():
-    # Test the "lsoda", "vode" and "zvode" solvers of the `ode` class
+    # Test the "lsoda", "lsodar", "vode" and "zvode" solvers of the `ode` class
     # with a system that has a banded Jacobian matrix.
 
     t_exact = np.linspace(0, 1.0, 5)
 
-    # --- Real arrays for testing the "lsoda" and "vode" solvers ---
+    # --- Real arrays for testing the "lsoda", "lsodar" and "vode" solvers ---
 
     # lband = 2, uband = 1:
     a_real = np.array([[-0.6, 0.1, 0.0, 0.0, 0.0],
@@ -176,7 +176,7 @@ def test_banded_ode_solvers():
         assert_allclose(y, y_exact)
 
     for idx in range(len(real_matrices)):
-        p = [['vode', 'lsoda'],  # solver
+        p = [['vode', 'lsoda', 'losdar'],  # solver
              ['bdf', 'adams'],   # method
              [False, True],      # use_jac
              [False, True],      # with_jacobian

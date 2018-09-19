@@ -120,6 +120,14 @@ class TestOde(TestODEClass):
                 continue
             self._do_problem(problem, 'lsoda')
 
+    def test_lsodar(self):
+        # Check the lsodar solver
+        for problem_cls in PROBLEMS:
+            problem = problem_cls()
+            if problem.cmplx:
+                continue
+            self._do_problem(problem, 'lsodar')
+
     def test_dopri5(self):
         # Check the dopri5 solver
         for problem_cls in PROBLEMS:
@@ -145,7 +153,7 @@ class TestOde(TestODEClass):
             self._do_problem(problem, 'dop853')
 
     def test_concurrent_fail(self):
-        for sol in ('vode', 'zvode', 'lsoda'):
+        for sol in ('vode', 'zvode', 'lsoda', 'lsodar'):
             f = lambda t, y: 1.0
 
             r = ode(f).set_integrator(sol)
@@ -163,7 +171,7 @@ class TestOde(TestODEClass):
         f = lambda t, y: 1.0
 
         for k in xrange(3):
-            for sol in ('vode', 'zvode', 'lsoda', 'dopri5', 'dop853'):
+            for sol in ('vode', 'zvode', 'lsoda', 'lsodar', 'dopri5', 'dop853'):
                 r = ode(f).set_integrator(sol)
                 r.set_initial_value(0, 0)
 
@@ -212,6 +220,12 @@ class TestComplexOde(TestODEClass):
         for problem_cls in PROBLEMS:
             problem = problem_cls()
             self._do_problem(problem, 'lsoda')
+
+    def test_lsodar(self):
+        # Check the lsodar solver
+        for problem_cls in PROBLEMS:
+            problem = problem_cls()
+            self._do_problem(problem, 'lsodar')
 
     def test_dopri5(self):
         # Check the dopri5 solver
@@ -665,6 +679,11 @@ class TestLSODACheckParameterUse(ODECheckParameterUse):
     solver_uses_jac = True
 
 
+class TestLSODARCheckParameterUse(ODECheckParameterUse):
+    solver_name = 'lsodar'
+    solver_uses_jac = True
+
+
 def test_odeint_trivial_time():
     # Test that odeint succeeds when given a single time point
     # and full_output=True.  This is a regression test for gh-4282.
@@ -732,7 +751,8 @@ def test_odeint_banded_jacobian():
     # calls of odeint with a full jacobian and with a banded jacobian. This is
     # a regression test--there was a bug in the handling of banded jacobians
     # that resulted in an incorrect jacobian matrix being passed to the LSODA
-    # code.  That would cause errors or excessive jacobian evaluations.
+    # or LSODAR code.  That would cause errors or excessive jacobian
+    # evaluations.
     assert_array_equal(info1['nje'], info2['nje'])
     assert_array_equal(info3['nje'], info4['nje'])
 

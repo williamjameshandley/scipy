@@ -6,7 +6,7 @@ from pytest import raises as assert_raises
 from scipy._lib._numpy_compat import suppress_warnings
 import numpy as np
 from scipy.optimize._numdiff import group_columns
-from scipy.integrate import solve_ivp, RK23, RK45, Radau, BDF, LSODA
+from scipy.integrate import solve_ivp, RK23, RK45, Radau, BDF, LSODA, LSODAR
 from scipy.integrate import OdeSolution
 from scipy.integrate._ivp.common import num_jac
 from scipy.integrate._ivp.base import ConstantDenseOutput
@@ -144,7 +144,7 @@ def test_integration():
 
     for vectorized, method, t_span, jac in product(
             [False, True],
-            ['RK23', 'RK45', 'Radau', 'BDF', 'LSODA'],
+            ['RK23', 'RK45', 'Radau', 'BDF', 'LSODA', 'LSODAR'],
             [[5, 9], [5, 1]],
             [None, jac_rational, jac_rational_sparse]):
 
@@ -166,7 +166,7 @@ def test_integration():
 
         assert_(res.nfev < 40)
 
-        if method in ['RK23', 'RK45', 'LSODA']:
+        if method in ['RK23', 'RK45', 'LSODA', 'LSODAR']:
             assert_equal(res.njev, 0)
             assert_equal(res.nlu, 0)
         else:
@@ -194,7 +194,7 @@ def test_integration():
         # LSODA for some reasons doesn't pass the polynomial through the
         # previous points exactly after the order change. It might be some
         # bug in LSOSA implementation or maybe we missing something.
-        if method != 'LSODA':
+        if method != 'LSODA' or method != 'LSODAR':
             assert_allclose(res.sol(res.t), res.y, rtol=1e-15, atol=1e-15)
 
 
@@ -308,7 +308,7 @@ def test_events():
 
     event_rational_3.terminal = True
 
-    for method in ['RK23', 'RK45', 'Radau', 'BDF', 'LSODA']:
+    for method in ['RK23', 'RK45', 'Radau', 'BDF', 'LSODA', 'LSODAR']:
         res = solve_ivp(fun_rational, [5, 8], [1/3, 2/9], method=method,
                         events=(event_rational_1, event_rational_2))
         assert_equal(res.status, 0)
@@ -364,7 +364,7 @@ def test_events():
     # Test in backward direction.
     event_rational_1.direction = 0
     event_rational_2.direction = 0
-    for method in ['RK23', 'RK45', 'Radau', 'BDF', 'LSODA']:
+    for method in ['RK23', 'RK45', 'Radau', 'BDF', 'LSODA', 'LSODAR']:
         res = solve_ivp(fun_rational, [8, 5], [4/9, 20/81], method=method,
                         events=(event_rational_1, event_rational_2))
         assert_equal(res.status, 0)
@@ -416,7 +416,7 @@ def test_max_step():
     rtol = 1e-3
     atol = 1e-6
     y0 = [1/3, 2/9]
-    for method in [RK23, RK45, Radau, BDF, LSODA]:
+    for method in [RK23, RK45, Radau, BDF, LSODA, LSODAR]:
         for t_span in ([5, 9], [5, 1]):
             res = solve_ivp(fun_rational, t_span, y0, rtol=rtol,
                             max_step=0.5, atol=atol, method=method,
@@ -440,13 +440,13 @@ def test_max_step():
             assert_(np.all(e < 5))
 
             # See comment in test_integration.
-            if method is not LSODA:
+            if method is not LSODA or method is not LSODAR:
                 assert_allclose(res.sol(res.t), res.y, rtol=1e-15, atol=1e-15)
 
             assert_raises(ValueError, method, fun_rational, t_span[0], y0,
                           t_span[1], max_step=-1)
 
-            if method is not LSODA:
+            if method is not LSODA or method is not LSODAR:
                 solver = method(fun_rational, t_span[0], y0, t_span[1],
                                 rtol=rtol, atol=atol, max_step=1e-20)
                 message = solver.step()
@@ -519,7 +519,7 @@ def test_t_eval():
 
 
 def test_no_integration():
-    for method in ['RK23', 'RK45', 'Radau', 'BDF', 'LSODA']:
+    for method in ['RK23', 'RK45', 'Radau', 'BDF', 'LSODA', 'LSODAR']:
         sol = solve_ivp(lambda t, y: -y, [4, 4], [2, 3],
                         method=method, dense_output=True)
         assert_equal(sol.sol(4), [2, 3])
@@ -527,7 +527,7 @@ def test_no_integration():
 
 
 def test_no_integration_class():
-    for method in [RK23, RK45, Radau, BDF, LSODA]:
+    for method in [RK23, RK45, Radau, BDF, LSODA, LSODAR]:
         solver = method(lambda t, y: -y, 0.0, [10.0, 0.0], 0.0)
         solver.step()
         assert_equal(solver.status, 'finished')
@@ -549,13 +549,13 @@ def test_empty():
 
     y0 = np.zeros((0,))
 
-    for method in ['RK23', 'RK45', 'Radau', 'BDF', 'LSODA']:
+    for method in ['RK23', 'RK45', 'Radau', 'BDF', 'LSODA', 'LSODAR']:
         sol = assert_no_warnings(solve_ivp, fun, [0, 10], y0,
                                  method=method, dense_output=True)
         assert_equal(sol.sol(10), np.zeros((0,)))
         assert_equal(sol.sol([1, 2, 3]), np.zeros((0, 3)))
 
-    for method in ['RK23', 'RK45', 'Radau', 'BDF', 'LSODA']:
+    for method in ['RK23', 'RK45', 'Radau', 'BDF', 'LSODA', 'LSODAR']:
         sol = assert_no_warnings(solve_ivp, fun, [0, np.inf], y0,
                                  method=method, dense_output=True)
         assert_equal(sol.sol(10), np.zeros((0,)))
@@ -574,7 +574,7 @@ def test_ConstantDenseOutput():
 
 def test_classes():
     y0 = [1 / 3, 2 / 9]
-    for cls in [RK23, RK45, Radau, BDF, LSODA]:
+    for cls in [RK23, RK45, Radau, BDF, LSODA, LSODAR]:
         solver = cls(fun_rational, 5, y0, np.inf)
         assert_equal(solver.n, 2)
         assert_equal(solver.status, 'running')
@@ -583,7 +583,7 @@ def test_classes():
         assert_equal(solver.t, 5)
         assert_equal(solver.y, y0)
         assert_(solver.step_size is None)
-        if cls is not LSODA:
+        if cls is not LSODA or cls is not LSODAR:
             assert_(solver.nfev > 0)
             assert_(solver.njev >= 0)
             assert_equal(solver.nlu, 0)

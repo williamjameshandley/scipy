@@ -137,16 +137,20 @@ static PyObject *odepack_error;
     #if defined(NO_APPEND_FORTRAN)
         /* nothing to do here */
     #else
+        #define LSODA  LSODA_
         #define LSODAR  LSODAR_
     #endif
 #else
     #if defined(NO_APPEND_FORTRAN)
+        #define LSODA  lsoda
         #define LSODAR  lsodar
     #else
+        #define LSODA  lsoda_
         #define LSODAR  lsodar_
     #endif
 #endif
 
+void LSODA();
 void LSODAR();
 
 /*
@@ -748,9 +752,14 @@ odepack_odeint(PyObject *dummy, PyObject *args, PyObject *kwdict)
             itask = 1;  /* No more critical values */
         }
 
-        LSODAR(ode_function, &neq, y, &t, tout_ptr, &itol, rtol, atol, &itask,
-              &istate, &iopt, rwork, &lrw, iwork, &liw,
-              ode_jacobian_function, &jt, ode_g_function, &ng, &jroot);
+        if (g == Py_None)
+            LSODA(ode_function, &neq, y, &t, tout_ptr, &itol, rtol, atol, &itask,
+                  &istate, &iopt, rwork, &lrw, iwork, &liw,
+                  ode_jacobian_function, &jt);
+        else
+            LSODAR(ode_function, &neq, y, &t, tout_ptr, &itol, rtol, atol, &itask,
+                  &istate, &iopt, rwork, &lrw, iwork, &liw,
+                  ode_jacobian_function, &jt, ode_g_function, &ng, &jroot);
         if (full_output) {
             *((double *)PyArray_DATA(ap_hu) + (k-1)) = rwork[10];
             *((double *)PyArray_DATA(ap_tcur) + (k-1)) = rwork[12];

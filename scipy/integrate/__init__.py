@@ -54,6 +54,7 @@ The solvers are implemented as individual classes which can be used directly
    Radau         -- Implicit Runge-Kutta solver of order 5.
    BDF           -- Implicit multi-step variable order (1 to 5) solver.
    LSODA         -- LSODA solver from ODEPACK Fortran package.
+   LSODAR        -- LSODAR solver from ODEPACK Fortran package.
    OdeSolver     -- Base class for ODE solvers.
    DenseOutput   -- Local interpolant for computing a dense output.
    OdeSolution   -- Class which represents a continuous ODE solution.
@@ -92,7 +93,7 @@ from .quadpack import *
 from ._ode import *
 from ._bvp import solve_bvp
 from ._ivp import (solve_ivp, OdeSolution, DenseOutput,
-                   OdeSolver, RK23, RK45, Radau, BDF, LSODA)
+                   OdeSolver, RK23, RK45, Radau, BDF, LSODA, LSODAR)
 
 __all__ = [s for s in dir() if not s.startswith('_')]
 

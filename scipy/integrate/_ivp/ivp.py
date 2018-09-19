@@ -5,6 +5,7 @@ from .bdf import BDF
 from .radau import Radau
 from .rk import RK23, RK45
 from .lsoda import LSODA
+from .lsodar import LSODAR
 from scipy.optimize import OptimizeResult
 from .common import EPS, OdeSolution
 from .base import OdeSolver
@@ -14,7 +15,9 @@ METHODS = {'RK23': RK23,
            'RK45': RK45,
            'Radau': Radau,
            'BDF': BDF,
-           'LSODA': LSODA}
+           'LSODA': LSODA,
+           'LSODAR': LSODAR,
+           }
 
 
 MESSAGES = {0: "The solver successfully reached the end of the integration interval.",
@@ -220,13 +223,16 @@ def solve_ivp(fun, t_span, y0, method='RK45', t_eval=None, dense_output=False,
             * 'LSODA': Adams/BDF method with automatic stiffness detection and
               switching [7]_, [8]_. This is a wrapper of the Fortran solver
               from ODEPACK.
+            * 'LSODAR': Adams/BDF method with automatic stiffness detection,
+              switching and root finding [7]_, [8]_. This is a wrapper of the
+              Fortran solver from ODEPACK.
 
         You should use the 'RK45' or 'RK23' method for non-stiff problems and
         'Radau' or 'BDF' for stiff problems [9]_. If not sure, first try to run
         'RK45'. If needs unusually many iterations, diverges, or fails, your
         problem is likely to be stiff and you should use 'Radau' or 'BDF'.
-        'LSODA' can also be a good universal choice, but it might be somewhat
-        less convenient to work with as it wraps old Fortran code.
+        'LSODA' or 'LSODAR' can also be a good universal choice, but it might
+        be somewhat less convenient to work with as it wraps old Fortran code.
 
         You can also pass an arbitrary class derived from `OdeSolver` which
         implements the solver.
@@ -272,12 +278,12 @@ def solve_ivp(fun, t_span, y0, method='RK45', t_eval=None, dense_output=False,
         1e-3 for `rtol` and 1e-6 for `atol`.
     jac : {None, array_like, sparse_matrix, callable}, optional
         Jacobian matrix of the right-hand side of the system with respect to
-        y, required by the 'Radau', 'BDF' and 'LSODA' method. The Jacobian matrix
-        has shape (n, n) and its element (i, j) is equal to ``d f_i / d y_j``.
-        There are three ways to define the Jacobian:
+        y, required by the 'Radau', 'BDF', 'LSODA' and 'LSODAR' methods. The
+        Jacobian matrix has shape (n, n) and its element (i, j) is equal to 
+        ``d f_i / d y_j``.  There are three ways to define the Jacobian:
 
             * If array_like or sparse_matrix, the Jacobian is assumed to
-              be constant. Not supported by 'LSODA'.
+              be constant. Not supported by 'LSODA' or 'LSODAR'.
             * If callable, the Jacobian is assumed to depend on both
               t and y; it will be called as ``jac(t, y)`` as necessary.
               For the 'Radau' and 'BDF' methods, the return value might be a
@@ -295,10 +301,11 @@ def solve_ivp(fun, t_span, y0, method='RK45', t_eval=None, dense_output=False,
         speed up the computations [10]_. A zero entry means that a corresponding
         element in the Jacobian is always zero. If None (default), the Jacobian
         is assumed to be dense.
-        Not supported by 'LSODA', see `lband` and `uband` instead.
+        Not supported by 'LSODA' or 'LSODAR', see `lband` and `uband` instead.
     lband, uband : int or None
-        Parameters defining the bandwidth of the Jacobian for the 'LSODA' method,
-        i.e., ``jac[i, j] != 0 only for i - lband <= j <= i + uband``. Setting
+        Parameters defining the bandwidth of the Jacobian for the 'LSODA' and 
+        'LSODAR' methods, i.e., 
+        ``jac[i, j] != 0 only for i - lband <= j <= i + uband``. Setting
         these requires your jac routine to return the Jacobian in the packed format:
         the returned array must have ``n`` columns and ``uband + lband + 1``
         rows in which Jacobian diagonals are written. Specifically
@@ -308,8 +315,8 @@ def solve_ivp(fun, t_span, y0, method='RK45', t_eval=None, dense_output=False,
         number of Jacobian elements estimated by finite differences.
     min_step, first_step : float, optional
         The minimum allowed step size and the initial step size respectively
-        for 'LSODA' method. By default `min_step` is zero and `first_step` is
-        selected automatically.
+        for 'LSODA' and 'LSODAR' methods. By default `min_step` is zero and
+        `first_step` is selected automatically.
 
     Returns
     -------
