@@ -28,7 +28,8 @@ def configuration(parent_package='',top_path=None):
     lsodar_src = [join('odepack', fn) for fn in [
         'blkdta000.f', 'bnorm.f', 'cfode.f',
         'ewset.f', 'fnorm.f', 'intdy.f',
-        'lsodar.f', 'prja.f', 'solsy.f', 'srcma.f',
+        'lsodar.f', 'rchek.f', 'roots.f', 
+        'prja.f', 'solsy.f', 'srcma.f',
         'stoda.f', 'vmnorm.f', 'xerrwv.f', 'xsetf.f',
         'xsetun.f']]
     vode_src = [join('odepack', 'vode.f'), join('odepack', 'zvode.f')]
