@@ -486,7 +486,7 @@ fail:       /* Needed for use of PYERR */
 
 int
 compute_lrw_liw(int *lrw, int *liw, int neq, int jt, int ml, int mu,
-                int mxordn, int mxords)
+                int mxordn, int mxords, int ng)
 {
     int lrn, lrs, nyh, lmat;
 
@@ -508,8 +508,8 @@ compute_lrw_liw(int *lrw, int *liw, int neq, int jt, int ml, int mu,
     }
     nyh = neq;
 
-    lrn = 20 + nyh*(mxordn+1) + 3*neq;
-    lrs = 20 + nyh*(mxords+1) + 3*neq + lmat;
+    lrn = 20 + nyh*(mxordn+1) + 3*neq + 3*ng;
+    lrs = 20 + nyh*(mxords+1) + 3*neq + lmat + 3*ng;
 
     *lrw = PyArray_MAX(lrn,lrs);
     *liw = 20 + neq;
@@ -684,7 +684,7 @@ odepack_odeint(PyObject *dummy, PyObject *args, PyObject *kwdict)
     }
 
     /* Find size of working arrays*/
-    if (compute_lrw_liw(&lrw, &liw, neq, jt, ml, mu, mxordn, mxords) < 0) {
+    if (compute_lrw_liw(&lrw, &liw, neq, jt, ml, mu, mxordn, mxords, ng) < 0) {
         goto fail;
     }
 
