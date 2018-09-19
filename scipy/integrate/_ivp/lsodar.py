@@ -104,7 +104,7 @@ class LSODAR(OdeSolver):
     """
     def __init__(self, fun, t0, y0, t_bound, first_step=None, min_step=0.0,
                  max_step=np.inf, rtol=1e-3, atol=1e-6, jac=None, lband=None,
-                 uband=None, vectorized=False, **extraneous):
+                 uband=None, vectorized=False, g=None, ng=0, **extraneous):
         warn_extraneous(extraneous)
         super(LSODAR, self).__init__(fun, t0, y0, t_bound, vectorized)
 
@@ -127,10 +127,14 @@ class LSODAR(OdeSolver):
             def jac():
                 return None
 
+        if g is None:  # No lambda as PEP8 insists.
+            def g():
+                return None
+
         solver = ode(self.fun, jac)
         solver.set_integrator('lsodar', rtol=rtol, atol=atol, max_step=max_step,
                               min_step=min_step, first_step=first_step,
-                              lband=lband, uband=uband)
+                              lband=lband, uband=uband, g=g, ng=ng)
         solver.set_initial_value(y0, t0)
 
         # Inject t_bound into rwork array as needed for itask=5.

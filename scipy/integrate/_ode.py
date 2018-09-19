@@ -941,23 +941,24 @@ class vode(IntegratorBase):
 
     def reset(self, n, has_jac):
         mf = self._determine_mf_and_set_bands(has_jac)
+        ng = self.ng
 
         if mf == 10:
-            lrw = 20 + 16 * n
+            lrw = 20 + 16 * n + 3 * ng
         elif mf in [11, 12]:
-            lrw = 22 + 16 * n + 2 * n * n
+            lrw = 22 + 16 * n + 2 * n * n + 3 * ng
         elif mf == 13:
-            lrw = 22 + 17 * n
+            lrw = 22 + 17 * n + 3 * ng
         elif mf in [14, 15]:
-            lrw = 22 + 18 * n + (3 * self.ml + 2 * self.mu) * n
+            lrw = 22 + 18 * n + (3 * self.ml + 2 * self.mu) * n + 3 * ng
         elif mf == 20:
-            lrw = 20 + 9 * n
+            lrw = 20 + 9 * n + 3 * ng
         elif mf in [21, 22]:
-            lrw = 22 + 9 * n + 2 * n * n
+            lrw = 22 + 9 * n + 2 * n * n + 3 * ng
         elif mf == 23:
-            lrw = 22 + 10 * n
+            lrw = 22 + 10 * n + 3 * ng
         elif mf in [24, 25]:
-            lrw = 22 + 11 * n + (3 * self.ml + 2 * self.mu) * n
+            lrw = 22 + 11 * n + (3 * self.ml + 2 * self.mu) * n + 3 * ng
         else:
             raise ValueError('Unexpected mf=%s' % mf)
 
@@ -1391,6 +1392,8 @@ class lsodar(IntegratorBase):
                  with_jacobian=False,
                  rtol=1e-6, atol=1e-12,
                  lband=None, uband=None,
+                 g=None,
+                 ng=0,
                  nsteps=500,
                  max_step=0.0,  # corresponds to infinite
                  min_step=0.0,
@@ -1407,6 +1410,9 @@ class lsodar(IntegratorBase):
         self.atol = atol
         self.mu = uband
         self.ml = lband
+
+        self.g = g
+        self.ng = ng
 
         self.max_order_ns = max_order_ns
         self.max_order_s = max_order_s
@@ -1440,11 +1446,12 @@ class lsodar(IntegratorBase):
                 if self.ml is None:
                     self.ml = 0
                 jt = 5
-        lrn = 20 + (self.max_order_ns + 4) * n
+        ng = self.ng
+        lrn = 20 + (self.max_order_ns + 4) * n + 3 * ng
         if jt in [1, 2]:
-            lrs = 22 + (self.max_order_s + 4) * n + n * n
+            lrs = 22 + (self.max_order_s + 4) * n + n * n + 3 * ng
         elif jt in [4, 5]:
-            lrs = 22 + (self.max_order_s + 5 + 2 * self.ml + self.mu) * n
+            lrs = 22 + (self.max_order_s + 5 + 2 * self.ml + self.mu) * n + 3 * ng
         else:
             raise ValueError('Unexpected jt=%s' % jt)
         lrw = max(lrn, lrs)
@@ -1469,6 +1476,7 @@ class lsodar(IntegratorBase):
                           self.rwork, self.iwork, jt]
         self.success = 1
         self.initialized = False
+        self.jroot = [0] * ng
 
     def run(self, f, jac, y0, t0, t1, f_params, jac_params):
         if self.initialized:
@@ -1477,9 +1485,10 @@ class lsodar(IntegratorBase):
             self.initialized = True
             self.acquire_new_handle()
         args = [f, y0, t0, t1] + self.call_args[:-1] + \
-               [jac, self.call_args[-1], f_params, 0, jac_params]
-        y1, t, istate = self.runner(*args)
+               [jac, self.call_args[-1], self.g, self.ng, f_params, 0, jac_params]
+        y1, t, istate, jroot = self.runner(*args)
         self.istate = istate
+        self.jroot = jroot
         if istate < 0:
             unexpected_istate_msg = 'Unexpected istate={:d}'.format(istate)
             warnings.warn('{:s}: {:s}'.format(self.__class__.__name__,

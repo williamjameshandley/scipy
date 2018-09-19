@@ -56,7 +56,7 @@ python module lsodar
          integer dimension(liw),intent(in,cache) :: iwork
          integer intent(hide),check(len(iwork)>=liw),depend(iwork) :: liw=len(iwork)
          integer intent(in) :: jt
-         integer intent(hide) :: ng
+         integer intent(in) :: ng
          integer dimension(ng),intent(out) :: jroot
        end subroutine lsodar
     end interface
