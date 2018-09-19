@@ -16,8 +16,7 @@ METHODS = {'RK23': RK23,
            'Radau': Radau,
            'BDF': BDF,
            'LSODA': LSODA,
-           'LSODAR': LSODAR,
-           }
+           'LSODAR': LSODAR}
 
 
 MESSAGES = {0: "The solver successfully reached the end of the integration interval.",

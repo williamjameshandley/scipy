@@ -132,6 +132,7 @@ scipy/fftpack/src/dct.c
 scipy/fftpack/src/dst.c
 scipy/integrate/_dopmodule.c
 scipy/integrate/lsodamodule.c
+scipy/integrate/lsodarmodule.c
 scipy/integrate/vodemodule.c
 scipy/interpolate/_ppoly.c
 scipy/interpolate/_bspl.c

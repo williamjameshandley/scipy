@@ -176,7 +176,7 @@ def test_banded_ode_solvers():
         assert_allclose(y, y_exact)
 
     for idx in range(len(real_matrices)):
-        p = [['vode', 'lsoda', 'losdar'],  # solver
+        p = [['vode', 'lsoda', 'lsodar'],  # solver
              ['bdf', 'adams'],   # method
              [False, True],      # use_jac
              [False, True],      # with_jacobian
